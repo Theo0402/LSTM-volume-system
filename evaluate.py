@@ -1,4 +1,16 @@
+"""
+Generate effectiveness graphs after training.
 
+Uses eval_data/ (separate from training data) for unbiased evaluation.
+
+Produces:
+  1. Training vs Validation loss curve
+  2. Predicted vs Actual scatter plot  (from eval_data/)
+  3. Error distribution histogram       (from eval_data/)
+  4. Real-time volume curves             (from eval_data/)
+
+Usage:  python evaluate.py
+"""
 
 import json
 import glob
@@ -66,15 +78,11 @@ def evaluate_final_volumes(model, recordings, cfg, device):
     return preds, labels
 
 
-# ══════════════════════════════════════════════════════════
+# 
 #  PLOT FUNCTIONS
-# ══════════════════════════════════════════════════════════
 
 def compute_metrics(preds, labels, tolerances=[0.05, 0.1, 0.2, 0.5]):
-    """
-    Compute comprehensive regression metrics.
-    Returns dict of metric_name → value.
-    """
+
     preds  = np.array(preds)
     labels = np.array(labels)
     errors = preds - labels
@@ -126,8 +134,8 @@ def compute_metrics(preds, labels, tolerances=[0.05, 0.1, 0.2, 0.5]):
 
 def print_metrics(metrics, target_volume):
     """Pretty-print all metrics to console."""
-    # print(f"\n{'═' * 55}")
-    # print(f"  EVALUATION RESULTS  ({metrics['n']} recordings)")
+    print(f"\n{'═' * 55}")
+    print(f"  EVALUATION RESULTS  ({metrics['n']} recordings)")
     print(f"{'═' * 55}")
     print(f"  Target volume:     {target_volume:.2f} L")
     print(f"  Mean prediction:   {metrics['mean_pred']:.4f} L")
@@ -148,11 +156,11 @@ def print_metrics(metrics, target_volume):
     else:
         print("  (no bias)")
     print(f"  Std:   {metrics['std']:.4f} L")
-    # print(f"{'─' * 55}")
-    # print(f"  Within-tolerance accuracy:")
-    # for tol, pct in metrics["accuracy"].items():
-    #     bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
-    #     print(f"    ±{tol:.2f} L:  {bar}  {pct:.1f}%")
+    print(f"{'─' * 55}")
+    print(f"  Within-tolerance accuracy:")
+    for tol, pct in metrics["accuracy"].items():
+        bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+        print(f"    ±{tol:.2f} L:  {bar}  {pct:.1f}%")
     print(f"{'═' * 55}")
 
 
@@ -160,7 +168,6 @@ def plot_metrics_summary(metrics, save_dir):
     """Save a visual metrics summary card as PNG."""
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-    # ── Panel 1: Key metrics bar chart ────────────────────
     ax = axes[0]
     metric_names = ["MAE", "RMSE", "Median AE", "Max Err", "|Bias|"]
     metric_vals  = [metrics["mae"], metrics["rmse"], metrics["median_ae"],
@@ -174,7 +181,6 @@ def plot_metrics_summary(metrics, save_dir):
     ax.set_title("Error Metrics")
     ax.grid(True, alpha=0.3, axis="y")
 
-    # ── Panel 2: Tolerance accuracy ───────────────────────df
     ax = axes[1]
     tols = [f"±{t:.2f}L" for t in metrics["accuracy"]]
     pcts = list(metrics["accuracy"].values())
@@ -189,7 +195,6 @@ def plot_metrics_summary(metrics, save_dir):
     ax.set_title("Accuracy at Different Tolerances")
     ax.grid(True, alpha=0.3, axis="x")
 
-    # ── Panel 3: Score card ───────────────────────────────
     ax = axes[2]
     ax.axis("off")
     text_lines = [
@@ -278,7 +283,6 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
     rows = math.ceil(n_files / cols)
     fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
 
-    # Ensure axes is always a flat array
     if n_files == 1:
         axes = [axes]
     else:
@@ -300,7 +304,6 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
             volumes = model(x, lengths)
         vols = volumes[0, :, 0].cpu().numpy()
 
-        # Rebuild full-length array (insert hold for zero-flow)
         vols_full = np.zeros(len(flow_all))
         vol_idx, last_vol = 0, 0.0
         for t in range(len(flow_all)):
@@ -313,12 +316,10 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
 
         ax = axes[i]
 
-        # ── Left axis: LSTM volume (L) ───────────────────
         ln1 = ax.plot(vols_full, label="LSTM", linewidth=2, color="tab:blue")
         ax.axhline(cfg.target_volume, color="red", linestyle="--",
                     label=f"Target {cfg.target_volume}L")
 
-        # Flow overlay, scaled to fit the volume axis
         y_top = max(cfg.target_volume, np.max(vols_full)) * 1.15
         flow_max = np.max(flow_all) if np.max(flow_all) > 0 else 1.0
         flow_scaled = (flow_all / flow_max) * y_top
@@ -327,14 +328,12 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
         ax.set_ylim(bottom=0, top=y_top)
         ax.set_ylabel("Volume (L)", fontsize=8)
 
-        # ── Right axis: raw naive ∑(flow×dt) ─────────────
         ax2 = ax.twinx()
         ln2 = ax2.plot(naive, label=f"Naive ∑(f×dt) = {naive[-1]:.1f}",
                         linewidth=1, alpha=0.7, color="tab:orange")
         ax2.set_ylabel("Raw ∑(flow×dt)", fontsize=8, color="tab:orange")
         ax2.tick_params(axis="y", labelcolor="tab:orange")
 
-        # ── Combined legend ──────────────────────────────
         lines = ln1 + ln2 + [ax.get_lines()[1]]  # LSTM + Naive + Target
         labels_leg = [l.get_label() for l in lines]
         # Add flow to legend manually
@@ -358,16 +357,227 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
     print(f"Saved: {save_dir}/realtime_curves.png")
 
 
-# ══════════════════════════════════════════════════════════
-#  MAIN
-# ══════════════════════════════════════════════════════════
+#  FLOW RATE VS ERROR ANALYSIS
+
+def plot_flowrate_vs_error(model, recordings, cfg, device, save_dir):
+    """
+    For each eval CSV, compute mean flow rate (proxy for blow speed)
+    and final volume error. Scatter plot reveals if the model is
+    worse on fast vs slow blows — the core problem being solved.
+
+    Also produces a secondary plot binning recordings into flow-rate
+    quartiles and showing error distribution per bin.
+    """
+    mean_flows, peak_flows, errors, durations, names = [], [], [], [], []
+
+    for name, flow_all, delta_t_all in recordings:
+        mask    = flow_all > 0.0
+        flow    = flow_all[mask]
+        delta_t = delta_t_all[mask]
+
+        if len(flow) < 2:
+            continue
+
+        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
+        lengths = torch.tensor([len(features)]).to(device)
+
+        with torch.no_grad():
+            volumes = model(x, lengths)
+        final_vol = volumes[0, -1, 0].cpu().item()
+        error = final_vol - cfg.target_volume
+
+        mean_flows.append(np.mean(flow))
+        peak_flows.append(np.max(flow))
+        durations.append(np.sum(delta_t))
+        errors.append(error)
+        names.append(name)
+
+    mean_flows = np.array(mean_flows)
+    peak_flows = np.array(peak_flows)
+    durations  = np.array(durations)
+    errors     = np.array(errors)
+    abs_errors = np.abs(errors)
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    ax = axes[0, 0]
+    sc = ax.scatter(mean_flows, errors, c=abs_errors, cmap="RdYlGn_r",
+                    edgecolors="k", linewidth=0.5, s=60)
+    ax.axhline(0, color="red", linestyle="--", alpha=0.5)
+    ax.set_xlabel("Mean Flow Rate (non-zero rows)")
+    ax.set_ylabel("Error (Predicted − Actual) [L]")
+    ax.set_title("Mean Flow Rate vs Volume Error")
+    ax.grid(True, alpha=0.3)
+    plt.colorbar(sc, ax=ax, label="|Error| (L)")
+
+    ax = axes[0, 1]
+    sc = ax.scatter(peak_flows, errors, c=abs_errors, cmap="RdYlGn_r",
+                    edgecolors="k", linewidth=0.5, s=60)
+    ax.axhline(0, color="red", linestyle="--", alpha=0.5)
+    ax.set_xlabel("Peak Flow Rate")
+    ax.set_ylabel("Error (Predicted − Actual) [L]")
+    ax.set_title("Peak Flow Rate vs Volume Error")
+    ax.grid(True, alpha=0.3)
+    plt.colorbar(sc, ax=ax, label="|Error| (L)")
+
+    ax = axes[1, 0]
+    sc = ax.scatter(durations, errors, c=mean_flows, cmap="coolwarm",
+                    edgecolors="k", linewidth=0.5, s=60)
+    ax.axhline(0, color="red", linestyle="--", alpha=0.5)
+    ax.set_xlabel("Blow Duration (s)")
+    ax.set_ylabel("Error (Predicted − Actual) [L]")
+    ax.set_title("Blow Duration vs Volume Error")
+    ax.grid(True, alpha=0.3)
+    plt.colorbar(sc, ax=ax, label="Mean Flow Rate")
+
+    ax = axes[1, 1]
+    n_bins = min(4, max(2, len(mean_flows) // 3))
+    bin_edges = np.percentile(mean_flows, np.linspace(0, 100, n_bins + 1))
+    bin_edges[-1] += 0.01  # include max value
+    bin_labels = []
+    bin_errors = []
+    for b in range(n_bins):
+        in_bin = (mean_flows >= bin_edges[b]) & (mean_flows < bin_edges[b + 1])
+        if np.any(in_bin):
+            bin_errors.append(abs_errors[in_bin])
+            bin_labels.append(f"{bin_edges[b]:.0f}–{bin_edges[b+1]:.0f}")
+
+    if bin_errors:
+        bp = ax.boxplot(bin_errors, labels=bin_labels, patch_artist=True)
+        colors_box = plt.cm.coolwarm(np.linspace(0.2, 0.8, len(bin_errors)))
+        for patch, color in zip(bp["boxes"], colors_box):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.6)
+    ax.set_xlabel("Mean Flow Rate Bin")
+    ax.set_ylabel("|Error| (L)")
+    ax.set_title("Absolute Error by Flow Rate Group")
+    ax.grid(True, alpha=0.3)
+
+    fig.suptitle("Flow Rate vs Prediction Error — Does blow speed affect accuracy?",
+                 fontsize=13, fontweight="bold")
+    fig.tight_layout()
+    fig.savefig(f"{save_dir}/flowrate_vs_error.png", dpi=150)
+    plt.close(fig)
+    print(f"Saved: {save_dir}/flowrate_vs_error.png")
+
+    print(f"\n{'─' * 55}")
+    print(f"  FLOW RATE VS ERROR SUMMARY")
+    print(f"{'─' * 55}")
+    if len(mean_flows) > 2:
+        corr_mean = np.corrcoef(mean_flows, abs_errors)[0, 1]
+        corr_peak = np.corrcoef(peak_flows, abs_errors)[0, 1]
+        corr_dur  = np.corrcoef(durations, abs_errors)[0, 1]
+        print(f"  Correlation (|error| vs mean flow):  {corr_mean:+.3f}")
+        print(f"  Correlation (|error| vs peak flow):  {corr_peak:+.3f}")
+        print(f"  Correlation (|error| vs duration):   {corr_dur:+.3f}")
+        print(f"  → Values near 0 = model handles all speeds equally")
+        print(f"  → Values near ±1 = model struggles with fast or slow blows")
+    print(f"{'─' * 55}")
+
+
+#  VOLUME MONOTONICITY CHECK
+
+
+def plot_monotonicity_check(model, recordings, cfg, device, save_dir):
+    """
+    Volume should only increase during a blow but it sometimes decrease
+    predicts a volume DECREASE and flags them.
+
+    """
+    results = []  
+
+    for name, flow_all, delta_t_all in recordings:
+        mask    = flow_all > 0.0
+        flow    = flow_all[mask]
+        delta_t = delta_t_all[mask]
+
+        if len(flow) < 2:
+            continue
+
+        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
+        lengths = torch.tensor([len(features)]).to(device)
+
+        with torch.no_grad():
+            volumes = model(x, lengths)
+        vols = volumes[0, :len(flow), 0].cpu().numpy()
+
+        diffs = np.diff(vols)
+        n_drops = int(np.sum(diffs < 0))
+        max_drop = float(np.min(diffs)) if n_drops > 0 else 0.0
+        n_steps = len(vols)
+        pct_mono = (1.0 - n_drops / max(n_steps - 1, 1)) * 100.0
+
+        results.append((name, n_steps, n_drops, max_drop, pct_mono, vols))
+
+    if not results:
+        print("No valid recordings for monotonicity check.")
+        return
+
+    names      = [r[0] for r in results]
+    n_drops    = [r[2] for r in results]
+    max_drops  = [r[3] for r in results]
+    pct_monos  = [r[4] for r in results]
+
+    # ── Detail plots for worst offenders ──────────────────
+    # Sort by most drops, show top 4 worst
+    sorted_results = sorted(results, key=lambda r: r[2], reverse=True)
+    worst = [r for r in sorted_results if r[2] > 0][:4]
+
+    if worst:
+        n_worst = len(worst)
+        fig2, axes2 = plt.subplots(1, n_worst, figsize=(5 * n_worst, 4))
+        if n_worst == 1:
+            axes2 = [axes2]
+
+        for i, (wname, wn, wd, wmax, wpct, wvols) in enumerate(worst):
+            ax = axes2[i]
+            steps = range(len(wvols))
+            ax.plot(steps, wvols, linewidth=1.5, color="tab:blue")
+
+            # Highlight drops in red
+            diffs = np.diff(wvols)
+            drop_idx = np.where(diffs < 0)[0]
+            for di in drop_idx:
+                ax.plot([di, di + 1], [wvols[di], wvols[di + 1]],
+                        color="red", linewidth=2.5, alpha=0.8)
+                ax.scatter([di + 1], [wvols[di + 1]], color="red", s=20, zorder=5)
+
+            ax.set_title(f"{wname[:20]}\n{wd} drops, worst={wmax:.4f}L", fontsize=9)
+            ax.set_xlabel("Timestep (non-zero only)")
+            ax.set_ylabel("Predicted Volume (L)")
+            ax.grid(True, alpha=0.3)
+
+        fig2.suptitle("Worst Monotonicity Offenders — Red = volume decrease",
+                      fontsize=12, fontweight="bold")
+        fig2.tight_layout()
+        fig2.savefig(f"{save_dir}/monotonicity_worst.png", dpi=150)
+        plt.close(fig2)
+        print(f"Saved: {save_dir}/monotonicity_worst.png")
+
+    # ── Console summary ───────────────────────────────────
+    fully_mono = sum(1 for p in pct_monos if p == 100.0)
+    avg_pct    = np.mean(pct_monos)
+    total_drops = sum(n_drops)
+
+    print(f"\n{'─' * 55}")
+    print(f"  MONOTONICITY CHECK SUMMARY")
+    print(f"{'─' * 55}")
+    print(f"  Fully monotonic:   {fully_mono}/{len(results)} recordings ({fully_mono/len(results)*100:.0f}%)")
+    print(f"  Average monotonic: {avg_pct:.1f}%")
+    print(f"  Total drops:       {total_drops} across all recordings")
+    if worst:
+        print(f"  Worst recording:   {worst[0][0]} ({worst[0][2]} drops, max={worst[0][3]:.4f}L)")
+    else:
+        print(f"  No volume decreases detected — model is fully monotonic!")
+    print(f"{'─' * 55}")
 
 def main():
     cfg = Config()
     save_dir = cfg.results_dir
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # ── 1: Training loss curve (from train.py logs) ───────
     history_path = f"{save_dir}/history.json"
     if os.path.exists(history_path):
         with open(history_path) as f:
@@ -376,10 +586,7 @@ def main():
     else:
         print("No history.json found — skipping loss curve.")
 
-    # ── Load model ────────────────────────────────────────
     model = load_model(cfg, device)
-
-    # ── Load eval data ────────────────────────────────────
     recordings = load_eval_csvs(cfg.eval_dir)
     if not recordings:
         print(f"\nNo CSV files found in {cfg.eval_dir}/")
@@ -388,26 +595,24 @@ def main():
 
     print(f"\nEvaluating on {len(recordings)} recordings from {cfg.eval_dir}/")
 
-    # ── 2 & 3: Predicted vs Actual + Error Distribution ───
     preds, labels = evaluate_final_volumes(model, recordings, cfg, device)
     if preds:
         plot_pred_vs_actual(preds, labels, save_dir)
         plot_error_distribution(preds, labels, save_dir)
 
-        # ── Comprehensive metrics ─────────────────────────
         metrics = compute_metrics(preds, labels)
         print_metrics(metrics, cfg.target_volume)
         plot_metrics_summary(metrics, save_dir)
 
-        # Save metrics to JSON for later comparison
         metrics_save = {k: v for k, v in metrics.items() if k != "accuracy"}
         metrics_save["accuracy"] = {str(k): v for k, v in metrics["accuracy"].items()}
         with open(f"{save_dir}/metrics.json", "w") as f:
             json.dump(metrics_save, f, indent=2)
         print(f"Saved: {save_dir}/metrics.json")
 
-    # ── 4: Real-time curves for every eval CSV ────────────
     plot_realtime_curves(model, recordings, cfg, device, save_dir)
+    plot_flowrate_vs_error(model, recordings, cfg, device, save_dir)
+    plot_monotonicity_check(model, recordings, cfg, device, save_dir)
 
     print(f"\nAll graphs saved to {save_dir}/")
 
