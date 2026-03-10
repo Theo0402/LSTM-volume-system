@@ -157,11 +157,11 @@ def print_metrics(metrics, target_volume):
         print("  (no bias)")
     print(f"  Std:   {metrics['std']:.4f} L")
     print(f"{'─' * 55}")
-    print(f"  Within-tolerance accuracy:")
-    for tol, pct in metrics["accuracy"].items():
-        bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
-        print(f"    ±{tol:.2f} L:  {bar}  {pct:.1f}%")
-    print(f"{'═' * 55}")
+    # print(f"  Within-tolerance accuracy:")
+    # for tol, pct in metrics["accuracy"].items():
+    #     bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+    #     print(f"    ±{tol:.2f} L:  {bar}  {pct:.1f}%")
+    # print(f"{'═' * 55}")
 
 
 def plot_metrics_summary(metrics, save_dir):
