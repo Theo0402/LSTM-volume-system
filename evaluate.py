@@ -556,7 +556,6 @@ def plot_monotonicity_check(model, recordings, cfg, device, save_dir):
         plt.close(fig2)
         print(f"Saved: {save_dir}/monotonicity_worst.png")
 
-    # ── Console summary ───────────────────────────────────
     fully_mono = sum(1 for p in pct_monos if p == 100.0)
     avg_pct    = np.mean(pct_monos)
     total_drops = sum(n_drops)
