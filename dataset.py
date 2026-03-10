@@ -38,13 +38,13 @@ class SpirometryDataset(Dataset):
 
             features = np.stack([flow, delta_t, flow * delta_t], axis=1)
 
-            # Cumulative volume at each timestep, scaled to target
+            # Cumulative volume at each timestep
             cum_vol = np.cumsum(flow * delta_t)
             total_naive = cum_vol[-1]
             if total_naive <= 0:
                 continue
 
-            cum_labels = (cum_vol / total_naive) * target_volume        #set 3L target volume
+            cum_labels = (cum_vol / total_naive) * target_volume       
 
             self.samples.append(torch.tensor(features, dtype=torch.float32))
             self.labels.append(torch.tensor(cum_labels, dtype=torch.float32))
