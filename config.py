@@ -3,6 +3,10 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+"""
+pip install -r requirements.txt
+"""
+
 
 @dataclass
 class Config:

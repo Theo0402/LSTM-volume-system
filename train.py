@@ -1,6 +1,5 @@
 
 """
-Usage:  python train.py
 """
 
 import json
@@ -24,6 +23,7 @@ def build_optimizer(model, cfg):
         return torch.optim.SGD(params, lr=cfg.learning_rate,
                                weight_decay=cfg.weight_decay, momentum=0.9)
     else:
+
         raise ValueError(f"Unknown optimizer: {name}")
 
 
