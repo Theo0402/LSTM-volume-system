@@ -1,6 +1,5 @@
 
 """
-Training loop — saves best model and logs losses for graphing.
 Usage:  python train.py
 """
 
@@ -31,8 +30,8 @@ def build_optimizer(model, cfg):
 def masked_mse_loss(preds, labels, lengths):
     batch_size, max_T = labels.shape
     mask = torch.arange(max_T, device=labels.device).unsqueeze(0) < lengths.unsqueeze(1)
-    preds_flat  = preds.squeeze(-1)[mask]       # (total_valid,)
-    labels_flat = labels[mask]                   # (total_valid,)
+    preds_flat  = preds.squeeze(-1)[mask]       
+    labels_flat = labels[mask]                   
     return nn.functional.mse_loss(preds_flat, labels_flat)
 
 

@@ -1,8 +1,6 @@
 
 
 """
-Two-layer LSTM → FC(64→32) + ReLU → Linear(32→1)
-
 forward()  → processes full sequence, returns all volumes
 step()     → processes one row at a time
 """
@@ -24,7 +22,7 @@ class SpirometryLSTM(nn.Module):
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
-            batch_first=True,
+            batch_first =True,
             dropout=dropout if num_layers > 1 else 0.0,
         )
 
@@ -49,7 +47,6 @@ class SpirometryLSTM(nn.Module):
 
         output, _ = pad_packed_sequence(packed_out, batch_first=True)
 
-        # Apply FC 
         volumes = self.fc(output)           # batch, max_T, 1
 
         _, unsort_idx = sort_idx.sort()

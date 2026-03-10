@@ -1,7 +1,7 @@
 
 
 """
-python predict.py data/spirometry_3.csv              
+python predict.py data/spirometry_2026-02-27T17-18-01-317515.csv             
 """
 
 import sys
