@@ -4,7 +4,7 @@
 
 main branch1
 
-
+# I want it to be more heavily related to flow times delta t
 forward()  → processes full sequence, returns all volumes
 step()     → processes one row at a time
 """

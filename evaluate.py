@@ -1,17 +1,3 @@
-"""
-Generate effectiveness graphs after training.
-
-Uses eval_data/ (separate from training data) for unbiased evaluation.
-
-Produces:
-  1. Training vs Validation loss curve
-  2. Predicted vs Actual scatter plot  (from eval_data/)
-  3. Error distribution histogram       (from eval_data/)
-  4. Real-time volume curves             (from eval_data/)
-
-Usage:  python evaluate.py
-"""
-
 import json
 import glob
 import math
@@ -64,7 +50,8 @@ def evaluate_final_volumes(model, recordings, cfg, device):
         if len(flow) < 2:
             continue
 
-        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        cum_vol = np.cumsum(flow * delta_t)
+        features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
         x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
         lengths = torch.tensor([len(features)]).to(device)
 
@@ -296,7 +283,8 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
         if len(flow) < 2:
             continue
 
-        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        cum_vol = np.cumsum(flow * delta_t)
+        features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
         x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
         lengths = torch.tensor([len(features)]).to(device)
 
@@ -378,7 +366,8 @@ def plot_flowrate_vs_error(model, recordings, cfg, device, save_dir):
         if len(flow) < 2:
             continue
 
-        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        cum_vol = np.cumsum(flow * delta_t)
+        features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
         x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
         lengths = torch.tensor([len(features)]).to(device)
 
@@ -495,7 +484,8 @@ def plot_monotonicity_check(model, recordings, cfg, device, save_dir):
         if len(flow) < 2:
             continue
 
-        features = np.stack([flow, delta_t, flow * delta_t], axis=1)
+        cum_vol = np.cumsum(flow * delta_t)
+        features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
         x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
         lengths = torch.tensor([len(features)]).to(device)
 

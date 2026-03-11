@@ -20,7 +20,7 @@ class Config:
     seed: int = 42
 
     # edit this -------------------------------------------------------------
-    input_size: int = 3                 
+    input_size: int = 4                 # [flow, dt, flow*dt, cumsum(flow*dt)]
     hidden_size: int = 64
     num_layers: int = 2
     fc_size: int = 32

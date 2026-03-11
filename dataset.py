@@ -1,6 +1,3 @@
-
-
-
 import os
 from pathlib import Path
 from typing import List, Tuple
@@ -36,13 +33,13 @@ class SpirometryDataset(Dataset):
             if len(flow) < 2:
                 continue
 
-            features = np.stack([flow, delta_t, flow * delta_t], axis=1)
-
-            # Cumulative volume at each timestep, scaled to target
+            # Cumulative volume at each timestep
             cum_vol = np.cumsum(flow * delta_t)
             total_naive = cum_vol[-1]
             if total_naive <= 0:
                 continue
+
+            features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
 
             cum_labels = (cum_vol / total_naive) * target_volume        #set 3L target volume
 
@@ -92,5 +89,3 @@ def get_dataloaders(cfg):
         collate_fn=collate_fn,
     )
     return train_loader, val_loader
-
-
