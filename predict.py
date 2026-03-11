@@ -1,5 +1,3 @@
-
-
 """
 python predict.py data/spirometry_2026-02-27T17-18-01-317515.csv             
 """
@@ -17,7 +15,7 @@ def load_model(cfg, device):
     model = SpirometryLSTM(
         input_size=cfg.input_size,
         hidden_size=cfg.hidden_size,
-        num_layers=cfg.num_layers,
+        num_layers=cfg.num_layers, 
         fc_size=cfg.fc_size,
         dropout=0.0,           # no dropout at inference
     ).to(device)
@@ -41,13 +39,15 @@ def realtime_from_csv(csv_path: str):
 
     model.reset_state(device)
     vol = 0.0
+    running_sum = 0.0
 
     for t in range(len(flow)):
         if flow[t] == 0.0:
             pass
         else:
+            running_sum += flow[t] * delta_t[t]
             row = torch.tensor(
-                [flow[t], delta_t[t], flow[t] * delta_t[t]],
+                [flow[t], delta_t[t], flow[t] * delta_t[t], running_sum],
                 dtype=torch.float32,
             ).to(device)
             vol = model.step(row, device)

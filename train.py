@@ -1,7 +1,3 @@
-
-"""
-"""
-
 import json
 import torch
 import torch.nn as nn
@@ -46,6 +42,7 @@ def train_one_epoch(model, loader, optimizer, device):
 
         optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)  # Gradient Clipping
         optimizer.step()
 
         total_loss += loss.item() * labels.size(0)
