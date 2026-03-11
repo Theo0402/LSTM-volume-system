@@ -276,29 +276,21 @@ def plot_realtime_curves(model, recordings, cfg, device, save_dir):
         axes = np.array(axes).flatten()
 
     for i, (name, flow_all, delta_t_all) in enumerate(recordings):
-        mask    = flow_all > 0.0
-        flow    = flow_all[mask]
-        delta_t = delta_t_all[mask]
-
-        if len(flow) < 2:
-            continue
-
-        cum_vol = np.cumsum(flow * delta_t)
-        features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
-        x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
-        lengths = torch.tensor([len(features)]).to(device)
-
-        with torch.no_grad():
-            volumes = model(x, lengths)
-        vols = volumes[0, :, 0].cpu().numpy()
-
+        model.reset_state(device)
+        vol = 0.0
+        running_sum = 0.0
         vols_full = np.zeros(len(flow_all))
-        vol_idx, last_vol = 0, 0.0
+
         for t in range(len(flow_all)):
             if flow_all[t] > 0.0:
-                last_vol = vols[vol_idx]
-                vol_idx += 1
-            vols_full[t] = last_vol
+                running_sum += flow_all[t] * delta_t_all[t]
+                row = torch.tensor(
+                    [flow_all[t], delta_t_all[t],
+                     flow_all[t] * delta_t_all[t], running_sum],
+                    dtype=torch.float32,
+                ).to(device)
+                vol = model.step(row, device)
+            vols_full[t] = vol
 
         naive = np.cumsum(flow_all * delta_t_all)
 
