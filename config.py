@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 """
-
 pip install -r requirements.txt
 """
 
@@ -20,8 +19,7 @@ class Config:
     val_split: float = 0.2       
     seed: int = 42
 
-    # edit this -------------------------------------------------------------
-    input_size: int = 4                 # [flow, dt, flow*dt, cumsum(flow*dt)]
+    input_size: int = 4                 
     hidden_size: int = 64
     num_layers: int = 2
     fc_size: int = 32
@@ -31,7 +29,7 @@ class Config:
     epochs: int = 200
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
-    optimizer: str = "adam"             # try to find best output bewtween "adam"  "adamw"  "sgd"
+    optimizer: str = "adam"             # try to find best output bewtween adam  adamw  sgd
 
     def __post_init__(self):
         Path(self.results_dir).mkdir(exist_ok=True)
