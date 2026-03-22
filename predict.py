@@ -32,7 +32,7 @@ def realtime_from_csv(csv_path: str):
 
     df = pd.read_csv(csv_path)
     delta_t = df["delta_t_ms"].values / 1000.0
-    flow    = df["processed"].values
+    flow    = df["processed_real_units"].values
 
     print(f"{'Step':>5}  {'Flow':>10}  {'dt(s)':>8}  {'Pred Vol (L)':>12}")
     print("-" * 42)

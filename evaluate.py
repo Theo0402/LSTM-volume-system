@@ -32,7 +32,7 @@ def load_eval_csvs(eval_dir):
     for f in csv_files:
         df = pd.read_csv(f)
         delta_t = df["delta_t_ms"].values / 1000.0
-        flow    = df["processed"].values
+        flow    = df["processed_real_units"].values
         recordings.append((f.name, flow, delta_t))
     return recordings
 
