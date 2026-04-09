@@ -1,5 +1,3 @@
-
-
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -30,6 +28,13 @@ class Config:
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     optimizer: str = "adam"             # try to find best output bewtween adam  adamw  sgd
+
+    # PINN loss weights
+    lambda_physics: float = 0.1         # dV/dt ≈ flow*dt
+    lambda_mono: float = 1.0            # penalize volume decreases
+    lambda_start: float = 0.3           # V(0) ≈ 0
+    lambda_end: float = 0.5             # V(T) ≈ target_volume
+    pinn_warmup_epochs: int = 30        # ramp physics terms over this many epochs
 
     def __post_init__(self):
         Path(self.results_dir).mkdir(exist_ok=True)

@@ -23,7 +23,7 @@ class SpirometryDataset(Dataset):
             df = pd.read_csv(f)
 
             delta_t = df["delta_t_ms"].values / 1000.0
-            flow    = df["processed"].values
+            flow    = df["processed_real_units"].values
 
             # Strip 0
             mask = flow > 0.0
