@@ -58,12 +58,16 @@ def pinn_loss(preds, labels, lengths, x_padded, cfg, epoch):
     # mask for consecutive valid pairs (t, t+1)
     mask_pair = mask_t[:, 1:T_pred] & mask_t[:, :T_pred - 1]   # (B, T_pred-1)
 
-    # ── 2. Physics loss: dV_pred ≈ flow*dt ────────────────
-    dV_pred     = preds_sq[:, 1:] - preds_sq[:, :-1]           # (B, T_pred-1)
-    dV_expected = x_clip[:, 1:, 2]                              # feature 2 = flow*dt
+    # ── 2. Physics loss: dV_pred should match dV_label ─────
+    # Labels are already scaled to 0→target_volume (litres),
+    # so label diffs are the true per-step volume increments.
+    # Raw flow*dt is in arbitrary sensor units ≠ litres, so we
+    # compare against label increments instead.
+    dV_pred  = preds_sq[:, 1:] - preds_sq[:, :-1]           # (B, T_pred-1)
+    dV_label = labels[:, 1:T_pred] - labels[:, :T_pred - 1] # (B, T_pred-1)
 
     if mask_pair.any():
-        L_physics = nn.functional.mse_loss(dV_pred[mask_pair], dV_expected[mask_pair])
+        L_physics = nn.functional.mse_loss(dV_pred[mask_pair], dV_label[mask_pair])
     else:
         L_physics = torch.tensor(0.0, device=device)
 

@@ -48,19 +48,11 @@ class SpirometryLSTM(nn.Module):
         packed_out, _ = self.lstm(packed)
 
         output, _ = pad_packed_sequence(packed_out, batch_first=True)
-        # output: (B_sorted, max_T_unpacked, hidden_size)
 
-        correction = self.fc(output)        # (B_sorted, T, 1)
-        correction = torch.tanh(correction) * 0.3   # bound to ±30%
+        volumes = self.fc(output)           # (B, max_T, 1)
 
         _, unsort_idx = sort_idx.sort()
-        correction = correction[unsort_idx]
-
-        # Naive cumulative volume is feature index 3
-        T_out = correction.size(1)
-        naive_vol = x_padded[:, :T_out, 3:4]   # (B, T, 1)
-
-        volumes = naive_vol * (1.0 + correction)
+        volumes = volumes[unsort_idx]
         return volumes
 
     def reset_state(self, device=None):
@@ -79,8 +71,5 @@ class SpirometryLSTM(nn.Module):
             self._c = torch.zeros(self.num_layers, 1, self.hidden_size, device=device)
 
         out, (self._h, self._c) = self.lstm(x, (self._h, self._c))
-        correction = self.fc(out.squeeze(0))       # (1, 1)
-        correction = torch.tanh(correction).item() * 0.3
-
-        naive_vol = x_row[3].item()                # feature 3 = cumsum(flow*dt)
-        return naive_vol * (1.0 + correction)
+        vol = self.fc(out.squeeze(0))       # (1, 1)
+        return vol.item()
