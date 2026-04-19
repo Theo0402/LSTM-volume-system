@@ -40,6 +40,7 @@ class SpirometryDataset(Dataset):
                 continue
 
             features = np.stack([flow, delta_t, flow * delta_t, cum_vol], axis=1)
+            # features = np.stack([flow, delta_t, flow * delta_t], axis=1)
 
             cum_labels = (cum_vol / total_naive) * target_volume        #set 3L target volume
 
